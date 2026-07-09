@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#f2f3f5">
+<title>나이키 아울렛 마진 계산기</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    background: #f2f3f5;
+    margin: 0;
+    padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
+    padding-top: calc(8px + env(safe-area-inset-top));
+  }
+  .wrap {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 16px;
+    margin: 2px 0 8px;
+    text-align: center;
+  }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  label {
+    display: block;
+    font-size: 11px;
+    color: #555;
+    margin-bottom: 3px;
+    font-weight: 600;
+  }
+  .field {
+    margin-bottom: 8px;
+  }
+  .field:last-child {
+    margin-bottom: 0;
+  }
+  input[type="number"] {
+    width: 100%;
+    padding: 9px 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    -moz-appearance: textfield;
+    touch-action: manipulation;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"]:focus {
+    outline: none;
+    border-color: #333;
+  }
+  .hint {
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .buy-price {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 12px;
+    color: #333;
+  }
+  .buy-price b {
+    font-size: 18px;
+  }
+  .platforms {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .platform-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .platform-card h2 {
+    font-size: 12px;
+    margin: 0 0 6px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 4px;
+    gap: 4px;
+  }
+  .row span:last-child {
+    color: #222;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .row.breakeven {
+    background: #f0f3ff;
+    margin: 0 0 6px;
+    padding: 6px 8px;
+    border-radius: 8px;
+  }
+  .row.breakeven span:first-child {
+    color: #3a4a99;
+    font-weight: 600;
+  }
+  .row.breakeven span:last-child {
+    color: #1a2a7a;
+    font-weight: 700;
+    font-size: 12px;
+  }
+  .row[data-detail] {
+    cursor: pointer;
+  }
+  .row[data-detail] span:first-child::after {
+    content: " \24D8";
+    font-size: 10px;
+    opacity: 0.55;
+    font-weight: 400;
+  }
+  .detail {
+    display: none;
+    font-size: 10px;
+    line-height: 1.5;
+    color: #666;
+    background: #f5f5f7;
+    border-radius: 6px;
+    padding: 6px 8px;
+    margin: -2px 0 6px;
+  }
+  .detail.open {
+    display: block;
+  }
+  .margin-row {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .margin-row .label {
+    font-size: 11px;
+    color: #666;
+  }
+  .margin-figures {
+    text-align: right;
+  }
+  .margin-value {
+    font-size: 16px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .margin-rate {
+    font-size: 11px;
+    color: #666;
+  }
+  .positive { color: #1a73e8; }
+  .negative { color: #d93025; }
+  .storage-note {
+    font-size: 10px;
+    color: #b8860b;
+    text-align: center;
+    margin: -4px 0 8px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>나이키 아울렛 마진 계산기</h1>
+  <div class="storage-note" id="storageNote">이 브라우저 환경에서는 할인율이 자동 저장되지 않습니다.</div>
+
+  <div class="card">
+    <div class="field">
+      <label for="outletPrice">아울렛 정가 (원)</label>
+      <input type="number" id="outletPrice" placeholder="예: 129000" min="0" inputmode="numeric" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="discountRate">할인율 (%)</label>
+      <input type="number" id="discountRate" placeholder="예: 20" min="0" max="100" step="0.1" inputmode="decimal" autocomplete="off">
+      <div class="hint">한 번 입력하면 저장되어 다음에도 유지됩니다.</div>
+    </div>
+    <div class="field">
+      <label for="sellPrice">플랫폼 판매가 (원) · 수수료 계산 기준</label>
+      <input type="number" id="sellPrice" placeholder="예: 200000" min="0" inputmode="numeric" autocomplete="off">
+      <div class="hint" id="poizonTierHint"></div>
+    </div>
+  </div>
+
+  <div class="card buy-price">
+    <span>매입가</span>
+    <b id="buyPriceOut">0원</b>
+  </div>
+
+  <div class="platforms">
+    <div class="platform-card">
+      <h2>POIZON</h2>
+      <div class="row breakeven" data-detail="poizonBreakevenDetail"><span>본전가</span><span id="poizonBreakeven">0원</span></div>
+      <div class="detail" id="poizonBreakevenDetail"></div>
+      <div class="row" data-detail="poizonFeeDetail"><span>수수료</span><span id="poizonFee">0원</span></div>
+      <div class="detail" id="poizonFeeDetail"></div>
+      <div class="margin-row">
+        <div class="label">마진</div>
+        <div class="margin-figures">
+          <div class="margin-value" id="poizonMargin">0원</div>
+          <div class="margin-rate" id="poizonRate">0%</div>
+        </div>
+      </div>
+    </div>
+    <div class="platform-card">
+      <h2>KREAM</h2>
+      <div class="row breakeven" data-detail="kreamBreakevenDetail"><span>본전가</span><span id="kreamBreakeven">0원</span></div>
+      <div class="detail" id="kreamBreakevenDetail"></div>
+      <div class="row" data-detail="kreamFeeDetail"><span>수수료</span><span id="kreamFee">0원</span></div>
+      <div class="detail" id="kreamFeeDetail"></div>
+      <div class="margin-row">
+        <div class="label">마진</div>
+        <div class="margin-figures">
+          <div class="margin-value" id="kreamMargin">0원</div>
+          <div class="margin-rate" id="kreamRate">0%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DISCOUNT_KEY = "nikeOutletDiscountRate";
+
+const outletPriceEl = document.getElementById("outletPrice");
+const discountRateEl = document.getElementById("discountRate");
+const sellPriceEl = document.getElementById("sellPrice");
+
+const buyPriceOut = document.getElementById("buyPriceOut");
+const poizonFeeOut = document.getElementById("poizonFee");
+const poizonMarginOut = document.getElementById("poizonMargin");
+const poizonRateOut = document.getElementById("poizonRate");
+const kreamFeeOut = document.getElementById("kreamFee");
+const kreamMarginOut = document.getElementById("kreamMargin");
+const kreamRateOut = document.getElementById("kreamRate");
+const poizonBreakevenOut = document.getElementById("poizonBreakeven");
+const kreamBreakevenOut = document.getElementById("kreamBreakeven");
+const storageNoteEl = document.getElementById("storageNote");
+const poizonTierHintEl = document.getElementById("poizonTierHint");
+const poizonBreakevenDetailEl = document.getElementById("poizonBreakevenDetail");
+const poizonFeeDetailEl = document.getElementById("poizonFeeDetail");
+const kreamBreakevenDetailEl = document.getElementById("kreamBreakevenDetail");
+const kreamFeeDetailEl = document.getElementById("kreamFeeDetail");
+
+// file:// 로 열거나 미리보기(Quick Look) 등 저장소가 막힌 환경에서도
+// 계산 자체는 항상 동작하도록, localStorage는 있으면 쓰고 없으면 그냥 건너뛴다.
+let storageAvailable = true;
+try {
+  const testKey = "__storage_test__";
+  window.localStorage.setItem(testKey, "1");
+  window.localStorage.removeItem(testKey);
+} catch (e) {
+  storageAvailable = false;
+}
+if (!storageAvailable && storageNoteEl) {
+  storageNoteEl.style.display = "block";
+}
+
+function formatWon(n) {
+  const rounded = Math.round(n);
+  return rounded.toLocaleString("ko-KR") + "원";
+}
+
+function formatRate(n) {
+  return (Math.round(n * 10) / 10) + "%";
+}
+
+function poizonFee(sellPrice) {
+  if (sellPrice <= 150000) return 15000;
+  if (sellPrice < 450000) return sellPrice * 0.10;
+  return 45000;
+}
+
+function poizonTierLabel(sellPrice) {
+  if (sellPrice <= 150000) return "15만원 이하 · 15,000원 고정";
+  if (sellPrice < 450000) return "15만원 초과~45만원 미만 · 10%";
+  return "45만원 이상 · 45,000원 고정";
+}
+
+function kreamFee(sellPrice) {
+  return 2500 + sellPrice * 0.0585;
+}
+
+function ceilToThousand(n) {
+  return Math.ceil(n / 1000) * 1000;
+}
+
+function poizonBreakevenRaw(buyPrice) {
+  if (buyPrice <= 135000) return buyPrice + 15000;
+  if (buyPrice < 405000) return buyPrice / 0.9;
+  return buyPrice + 45000;
+}
+
+function poizonBreakeven(buyPrice) {
+  return ceilToThousand(poizonBreakevenRaw(buyPrice));
+}
+
+function kreamBreakevenRaw(buyPrice) {
+  return (buyPrice + 2500) / 0.9415;
+}
+
+function kreamBreakeven(buyPrice) {
+  return ceilToThousand(kreamBreakevenRaw(buyPrice));
+}
+
+function poizonBreakevenDetailText(buyPrice, raw, breakeven) {
+  let base;
+  if (buyPrice <= 135000) {
+    base = "매입가 " + formatWon(buyPrice) + " + 수수료 15,000원 = " + formatWon(raw) + " (본전가가 15만원 이하 구간이라 수수료가 고정 15,000원)";
+  } else if (buyPrice < 405000) {
+    base = "매입가 " + formatWon(buyPrice) + " ÷ (1 - 10%) = " + formatWon(raw) + " (본전가가 15만원 초과~45만원 미만 구간이라 10% 수수료를 거꾸로 계산)";
+  } else {
+    base = "매입가 " + formatWon(buyPrice) + " + 수수료 45,000원 = " + formatWon(raw) + " (본전가가 45만원 이상 구간이라 수수료가 고정 45,000원)";
+  }
+  return base + " → 1,000원 단위 입찰가로 올림 → " + formatWon(breakeven);
+}
+
+function kreamBreakevenDetailText(buyPrice, raw, breakeven) {
+  return "(매입가 " + formatWon(buyPrice) + " + 2,500원) ÷ (1 - 5.85%) = " + formatWon(raw) + " → 1,000원 단위 입찰가로 올림 → " + formatWon(breakeven);
+}
+
+function poizonFeeDetailText(basis, basisLabel, fee) {
+  if (basis <= 150000) {
+    return basisLabel + " " + formatWon(basis) + "는 15만원 이하 구간 → 수수료 15,000원 고정";
+  }
+  if (basis < 450000) {
+    return basisLabel + " " + formatWon(basis) + " × 10% = " + formatWon(fee) + " (15만원 초과~45만원 미만 구간)";
+  }
+  return basisLabel + " " + formatWon(basis) + "는 45만원 이상 구간 → 수수료 45,000원 고정";
+}
+
+function kreamFeeDetailText(basis, basisLabel, fee) {
+  return basisLabel + " " + formatWon(basis) + " × 5.85% + 2,500원 = " + formatWon(fee);
+}
+
+function setMarginDisplay(marginEl, rateEl, margin, rate) {
+  marginEl.textContent = formatWon(margin);
+  rateEl.textContent = formatRate(rate);
+  const cls = margin < 0 ? "negative" : "positive";
+  marginEl.classList.remove("positive", "negative");
+  rateEl.classList.remove("positive", "negative");
+  marginEl.classList.add(cls);
+  rateEl.classList.add(cls);
+}
+
+function clearMarginDisplay(marginEl, rateEl) {
+  marginEl.textContent = "-";
+  rateEl.textContent = "-";
+  marginEl.classList.remove("positive", "negative");
+  rateEl.classList.remove("positive", "negative");
+}
+
+function calculate() {
+  const outletPrice = parseFloat(outletPriceEl.value) || 0;
+  const discountRate = parseFloat(discountRateEl.value) || 0;
+  const sellPrice = parseFloat(sellPriceEl.value) || 0;
+
+  const buyPrice = outletPrice * (1 - discountRate / 100);
+  buyPriceOut.textContent = formatWon(buyPrice);
+
+  const pBreakevenRaw = poizonBreakevenRaw(buyPrice);
+  const kBreakevenRaw = kreamBreakevenRaw(buyPrice);
+  const pBreakeven = ceilToThousand(pBreakevenRaw);
+  const kBreakeven = ceilToThousand(kBreakevenRaw);
+  poizonBreakevenOut.textContent = formatWon(pBreakeven);
+  kreamBreakevenOut.textContent = formatWon(kBreakeven);
+  poizonBreakevenDetailEl.textContent = poizonBreakevenDetailText(buyPrice, pBreakevenRaw, pBreakeven);
+  kreamBreakevenDetailEl.textContent = kreamBreakevenDetailText(buyPrice, kBreakevenRaw, kBreakeven);
+
+  // 플랫폼 판매가를 아직 안 넣었으면, 본전가에 팔았을 때 기준으로 수수료를 미리 보여준다.
+  const hasSellPrice = sellPrice > 0;
+  const pFeeBasis = hasSellPrice ? sellPrice : pBreakeven;
+  const kFeeBasis = hasSellPrice ? sellPrice : kBreakeven;
+  const basisLabel = hasSellPrice ? "판매가" : "본전가";
+
+  const pFee = poizonFee(pFeeBasis);
+  const kFee = kreamFee(kFeeBasis);
+
+  poizonFeeOut.textContent = formatWon(pFee);
+  kreamFeeOut.textContent = formatWon(kFee);
+  poizonFeeDetailEl.textContent = poizonFeeDetailText(pFeeBasis, basisLabel, pFee);
+  kreamFeeDetailEl.textContent = kreamFeeDetailText(kFeeBasis, basisLabel, kFee);
+  poizonTierHintEl.textContent = hasSellPrice
+    ? "포이즌 구간: " + poizonTierLabel(sellPrice)
+    : "포이즌 구간(본전가 기준): " + poizonTierLabel(pBreakeven);
+
+  if (!hasSellPrice) {
+    clearMarginDisplay(poizonMarginOut, poizonRateOut);
+    clearMarginDisplay(kreamMarginOut, kreamRateOut);
+    return;
+  }
+
+  const pMargin = sellPrice - pFee - buyPrice;
+  const kMargin = sellPrice - kFee - buyPrice;
+
+  const pRate = buyPrice !== 0 ? (pMargin / buyPrice) * 100 : 0;
+  const kRate = buyPrice !== 0 ? (kMargin / buyPrice) * 100 : 0;
+
+  setMarginDisplay(poizonMarginOut, poizonRateOut, pMargin, pRate);
+  setMarginDisplay(kreamMarginOut, kreamRateOut, kMargin, kRate);
+}
+
+function saveDiscountRate() {
+  if (!storageAvailable) return;
+  try {
+    window.localStorage.setItem(DISCOUNT_KEY, discountRateEl.value);
+  } catch (e) {
+    // 저장 실패해도 계산 자체는 계속 동작해야 하므로 조용히 무시
+  }
+}
+
+function loadDiscountRate() {
+  if (!storageAvailable) return;
+  try {
+    const saved = window.localStorage.getItem(DISCOUNT_KEY);
+    if (saved !== null) {
+      discountRateEl.value = saved;
+    }
+  } catch (e) {
+    // 무시
+  }
+}
+
+[outletPriceEl, discountRateEl, sellPriceEl].forEach(el => {
+  el.addEventListener("input", () => {
+    if (el === discountRateEl) saveDiscountRate();
+    calculate();
+  });
+});
+
+document.querySelectorAll("[data-detail]").forEach(row => {
+  row.addEventListener("click", () => {
+    const detail = document.getElementById(row.dataset.detail);
+    if (detail) detail.classList.toggle("open");
+  });
+});
+
+loadDiscountRate();
+calculate();
+</script>
+</body>
+</html>
